@@ -38,3 +38,22 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+
+class Interest(models.Model):
+    InterestID = models.AutoField(primary_key=True)
+    Title = models.CharField(max_length=255, unique=True)
+    Description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.Title
+
+
+class UserInterest(models.Model):
+    ID = models.AutoField(primary_key=True)
+    UserID = models.ForeignKey("users.User", on_delete=models.CASCADE)
+    InterestID = models.ForeignKey(Interest, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('UserID', 'InterestID')
