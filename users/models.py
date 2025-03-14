@@ -40,6 +40,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
+class PasswordReset(models.Model):
+    email = models.EmailField()
+    token = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 class Interest(models.Model):
     InterestID = models.AutoField(primary_key=True)
