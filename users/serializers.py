@@ -59,3 +59,11 @@ class ResetPasswordSerializer(serializers.Serializer):
         if data['new_password'] != data['confirm_password']:
             raise serializers.ValidationError({'error': "Passwords do not match."})
         return data
+
+
+class UpdateAccountTypeSerializer(serializers.ModelSerializer):
+    AccountType = serializers.ChoiceField(choices=User.ACCOUNT_TYPE_CHOICES)  # Explicitly define choices
+
+    class Meta:
+        model = User
+        fields = ['AccountType']

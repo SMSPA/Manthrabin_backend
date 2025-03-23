@@ -9,7 +9,7 @@ from django.conf import settings
 
 from .models import User, Interest, UserInterest, PasswordReset
 from .serializers import RegisterSerializer, UserSerializer, InterestSerializer, UserProfileUpdateSerializer, \
-    PasswordChangeSerializer, ResetPasswordRequestSerializer, ResetPasswordSerializer
+    PasswordChangeSerializer, ResetPasswordRequestSerializer, ResetPasswordSerializer, UpdateAccountTypeSerializer
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 
@@ -191,3 +191,23 @@ class ResetPasswordView(APIView):
             return Response({'message': 'Password updated successfully'})
         else:
             return Response({'error': 'No user found'}, status=404)
+
+
+class UpdateAccountTypeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk): # pk for user's PublicID
+        # Only allow access if the user is an Admin
+        if request.user.AccountType != "Admin":
+            return Response({"error": "Access denied. Admins only."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            user = User.objects.get(PublicID=pk)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UpdateAccountTypeSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

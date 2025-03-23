@@ -36,6 +36,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
 
+    ACCOUNT_TYPE_CHOICES = ['Admin', 'User']
+
     def __str__(self):
         return self.email
 
