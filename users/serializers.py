@@ -2,10 +2,19 @@ from rest_framework import serializers
 from .models import User, Interest, UserInterest
 
 
+class HomeSerializer(serializers.Serializer):
+    message = serializers.CharField(default="Welcome to Home Page")
+    account_type = serializers.SerializerMethodField()
+
+    def get_account_type(self, obj):
+        return getattr(obj, 'account_type', None)
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["PublicID", "email", "first_name", "last_name", "AccountType", "IsActive", "Created_at"]
+        fields = ["PublicID", "email", "first_name", "last_name", "password",
+                  "AccountType", "IsActive", "Created_at"]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -55,14 +64,16 @@ class ResetPasswordSerializer(serializers.Serializer):
     confirm_password = serializers.CharField(
         write_only=True,
         required=True)
+
     def validate(self, data):
         if data['new_password'] != data['confirm_password']:
-            raise serializers.ValidationError({'error': "Passwords do not match."})
+            raise serializers.ValidationError(
+                {'error': "Passwords do not match."})
         return data
 
 
 class UpdateAccountTypeSerializer(serializers.ModelSerializer):
-    AccountType = serializers.ChoiceField(choices=User.ACCOUNT_TYPE_CHOICES)  # Explicitly define choices
+    AccountType = serializers.ChoiceField(choices=User.ACCOUNT_TYPE_CHOICES)
 
     class Meta:
         model = User

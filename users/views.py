@@ -4,12 +4,13 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
-import os
 from django.conf import settings
 
 from .models import User, Interest, UserInterest, PasswordReset
-from .serializers import RegisterSerializer, UserSerializer, InterestSerializer, UserProfileUpdateSerializer, \
-    PasswordChangeSerializer, ResetPasswordRequestSerializer, ResetPasswordSerializer, UpdateAccountTypeSerializer
+from .serializers import HomeSerializer, RegisterSerializer, UserSerializer, \
+    InterestSerializer, UserProfileUpdateSerializer, \
+    PasswordChangeSerializer, ResetPasswordRequestSerializer, \
+    ResetPasswordSerializer, UpdateAccountTypeSerializer
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 
@@ -27,10 +28,11 @@ class RegisterView(APIView):
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
-                # 'user': UserSerializer(user).data,
-                # 'redirect_to': '/select-interests'  # Redirect new users to interests page
+                # 'user': UserSerializer(user).data, #BUG
+                # 'redirect_to': '/select-interests'  #BUG
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class LoginView(APIView):
     serializer_class = UserSerializer
@@ -50,16 +52,18 @@ class LoginView(APIView):
             })
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
+
 class HomeView(APIView):
+    serializer_class = HomeSerializer
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({
-            'message': 'Welcome to Home Page',
-            'account_type': request.user.AccountType  # Send account type to frontend
-        })
+        serializer = self.serializer_class(request.user)
+        return Response(serializer.data)
+
 
 class UsersListView(APIView):
+    serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -68,17 +72,19 @@ class UsersListView(APIView):
             return Response({"error": "Access denied"}, status=status.HTTP_403_FORBIDDEN)
 
         users = User.objects.all()
-        serializer = UserSerializer(users, many=True)
+        serializer = self.serializer_class(users, many=True)
         return Response(serializer.data)
 
 
 class InterestListView(APIView):
+    serializer_class = InterestSerializer
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         interests = Interest.objects.all()
-        serializer = InterestSerializer(interests, many=True)
+        serializer = self.serializer_class(interests, many=True)
         return Response(serializer.data)
+
 
 class SaveUserInterestsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -98,16 +104,21 @@ class SaveUserInterestsView(APIView):
         return Response({"message": "Interests saved successfully."}, status=status.HTTP_200_OK)
 
 
-# Profile
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return UserSerializer
+        return UserProfileUpdateSerializer
+
     def get(self, request):
-        serializer = UserSerializer(request.user)
+        serializer = self.get_serializer_class()(request.user)
         return Response(serializer.data)
 
     def put(self, request):
-        serializer = UserProfileUpdateSerializer(request.user, data=request.data, partial=True)
+        serializer = self.get_serializer_class()(
+            request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -115,13 +126,15 @@ class UserProfileView(APIView):
 
 
 class ChangePasswordView(APIView):
+    serializer_class = PasswordChangeSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = PasswordChangeSerializer(data=request.data)
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             user = request.user
-            current_password = serializer.validated_data.get('current_password')
+            current_password = serializer.validated_data.get(
+                'current_password')
             new_password = serializer.validated_data.get('new_password')
 
             # verify current password
@@ -140,6 +153,7 @@ class ChangePasswordView(APIView):
                 'access': str(refresh.access_token),
             })
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class RequestResetPasswordView(APIView):
     permission_classes = [AllowAny]
@@ -160,7 +174,7 @@ class RequestResetPasswordView(APIView):
             send_mail(
                 subject="Password Reset Request",
                 message=f"Click the link below to reset your password:\n{reset_url}",
-                    from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
                 fail_silently=False,
             )
@@ -199,7 +213,7 @@ class UpdateAccountTypeView(APIView):
     serializer_class = UpdateAccountTypeSerializer
     permission_classes = [IsAuthenticated]
 
-    def put(self, request, pk): # pk for user's PublicID
+    def put(self, request, pk):  # pk for user's PublicID
         # Only allow access if the user is an Admin
         if request.user.AccountType != "Admin":
             return Response({"error": "Access denied. Admins only."}, status=status.HTTP_403_FORBIDDEN)
