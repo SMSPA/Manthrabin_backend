@@ -14,10 +14,11 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 
 class RegisterView(APIView):
+    serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
 
@@ -26,12 +27,13 @@ class RegisterView(APIView):
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
-                'user': UserSerializer(user).data,
-                'redirect_to': '/select-interests'  # Redirect new users to interests page
+                # 'user': UserSerializer(user).data,
+                # 'redirect_to': '/select-interests'  # Redirect new users to interests page
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
+    serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -44,7 +46,7 @@ class LoginView(APIView):
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
-                'user': UserSerializer(user).data
+                'user': self.serializer_class(user).data
             })
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -194,6 +196,7 @@ class ResetPasswordView(APIView):
 
 
 class UpdateAccountTypeView(APIView):
+    serializer_class = UpdateAccountTypeSerializer
     permission_classes = [IsAuthenticated]
 
     def put(self, request, pk): # pk for user's PublicID
@@ -206,7 +209,7 @@ class UpdateAccountTypeView(APIView):
         except User.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = UpdateAccountTypeSerializer(user, data=request.data)
+        serializer = self.serializer_class(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(UserSerializer(user).data, status=status.HTTP_200_OK)

@@ -1,7 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import filters, generics
 from haystack.query import SearchQuerySet
-from .serializers import ConversationsSerializer
+
+from conversations.models import Conversations
+from conversations.serializers import ConversationsSerializer
 
 
 class SearchConversationsView(APIView):
@@ -15,3 +18,17 @@ class SearchConversationsView(APIView):
 
         serializer = ConversationsSerializer(conversations, many=True)
         return Response(serializer.data)
+
+
+class ConversationsListView(generics.ListAPIView):
+    queryset = Conversations.objects.all()
+    serializer_class = ConversationsSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['prompt', 'response']
+
+
+class ConversationsListCreateView(generics.ListCreateAPIView):
+    queryset = Conversations.objects.all()
+    serializer_class = ConversationsSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['prompt', 'response']

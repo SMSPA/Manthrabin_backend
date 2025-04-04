@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import SearchConversationsView
+from .views import SearchConversationsView, ConversationsListView
 
 urlpatterns = [
-    path('search/', SearchConversationsView.as_view()),
+    path('', ConversationsListView.as_view()),
 ]
