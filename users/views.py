@@ -7,7 +7,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 
 from .models import User, Interest, UserInterest, PasswordReset
-from .serializers import HomeSerializer, RegisterSerializer, UserSerializer, \
+from .serializers import HomeSerializer, LoginInputSerializer, RegisterSerializer, UserSerializer, \
     InterestSerializer, UserProfileUpdateSerializer, \
     PasswordChangeSerializer, ResetPasswordRequestSerializer, \
     ResetPasswordSerializer, UpdateAccountTypeSerializer
@@ -35,7 +35,7 @@ class RegisterView(APIView):
 
 
 class LoginView(APIView):
-    serializer_class = UserSerializer
+    serializer_class = LoginInputSerializer
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -88,7 +88,6 @@ class InterestListView(APIView):
 
 class SaveUserInterestsView(APIView):
     permission_classes = [IsAuthenticated]
-
     def post(self, request):
         user = request.user
         selected_interest_ids = request.data.get("interests", [])

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from .models import User, Interest, UserInterest
 
 
@@ -6,15 +7,26 @@ class HomeSerializer(serializers.Serializer):
     message = serializers.CharField(default="Welcome to Home Page")
     account_type = serializers.SerializerMethodField()
 
-    def get_account_type(self, obj):
+    def get_account_type(self, obj) -> str:
         return getattr(obj, 'account_type', None)
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["PublicID", "email", "first_name", "last_name", "password",
+        fields = ["PublicID", "email", "first_name", "last_name",
                   "AccountType", "IsActive", "Created_at"]
+
+
+class LoginInputSerializer(serializers.Serializer):
+    # Input fields
+    email = serializers.EmailField(write_only=True)
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
+
+    # Output fields
+    refresh = serializers.CharField(read_only=True)
+    access = serializers.CharField(read_only=True)
+    user = UserSerializer(read_only=True)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
