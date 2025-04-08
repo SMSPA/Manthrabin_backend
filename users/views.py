@@ -7,11 +7,13 @@ from django.core.mail import send_mail
 from django.conf import settings
 
 from .models import User, Interest, UserInterest, PasswordReset
-from .serializers import HomeSerializer, LoginInputSerializer, RegisterSerializer, UserSerializer, \
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from .serializers import \
+    HomeSerializer, LoginInputSerializer, \
+    RegisterSerializer, UserSerializer, \
     InterestSerializer, UserProfileUpdateSerializer, \
     PasswordChangeSerializer, ResetPasswordRequestSerializer, \
     ResetPasswordSerializer, UpdateAccountTypeSerializer
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 
 class RegisterView(APIView):
@@ -23,13 +25,12 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
 
-            # Automatically log in the user after registration
             refresh = RefreshToken.for_user(user)
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
-                # 'user': UserSerializer(user).data, #BUG
-                # 'redirect_to': '/select-interests'  #BUG
+                'user': UserSerializer(user).data,
+                'redirect_to': '/select-interests'
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -88,6 +89,7 @@ class InterestListView(APIView):
 
 class SaveUserInterestsView(APIView):
     permission_classes = [IsAuthenticated]
+
     def post(self, request):
         user = request.user
         selected_interest_ids = request.data.get("interests", [])
