@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'channels',
     'users',
     'conversations',
     'drf_spectacular',
@@ -107,8 +108,12 @@ WSGI_APPLICATION = 'manthrabin_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'manthrabin',
+        'USER': 'manthrabin',
+        'PASSWORD': 'QQB@ng8215',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
     }
     # 'default': {
     #     'ENGINE': 'django.db.backends.mysql',
