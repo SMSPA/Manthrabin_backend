@@ -1,0 +1,4 @@
+DB_PASSWORD="password"
+DB_USER="user"
+EMAIL_HOST_USER="user@gmail.com"
+EMAIL_HOST_PASSWORD="app password"
