@@ -41,7 +41,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'channels',
     'users',
+    'conversations'
 ]
 
 #email
@@ -97,9 +99,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'manthrabin',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
+        'USER': 'manthrabin',
+        'PASSWORD': 'QQB@ng8215',
+        'HOST': '127.0.0.1',
         'PORT': '3306',
     }
 }
