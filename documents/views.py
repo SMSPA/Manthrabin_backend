@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions, parsers, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.http import FileResponse
-import logging
+import logging # TODO: improve usage of logging 
 from .models import Document
 from .serializers import DocumentSerializer
 
@@ -16,7 +16,8 @@ class AdminOnlyPermission(permissions.BasePermission):
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAdminUser] # TODO: Change to AdminOnlyPermission
+    # permission_classes = [AdminOnlyPermission]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
     logger = logging.getLogger(__name__)
