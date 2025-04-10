@@ -9,6 +9,7 @@ class UserManager(BaseUserManager):
         email = self.normalize_email(email)
         user = self.model(email=email, first_name=first_name, last_name=last_name)
         user.set_password(password)
+        user.is_staff = False
         user.save(using=self._db)
         return user
 
@@ -18,6 +19,7 @@ class UserManager(BaseUserManager):
         user.is_staff = True
         user.save(using=self._db)
         return user
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.AutoField(primary_key=True)
@@ -30,6 +32,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     IsActive = models.BooleanField(default=True)
     Created_at = models.DateTimeField(auto_now_add=True)
     Updated_at = models.DateTimeField(auto_now=True)
+    is_staff = models.BooleanField(default=False)
 
     objects = UserManager()
 
