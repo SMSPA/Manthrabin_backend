@@ -1,5 +1,14 @@
 from rest_framework import serializers
-from .models import Conversation,LLMModel
+from .models import Conversation, Prompt, LLMModel
+
+
+class PromptSerializer(serializers.ModelSerializer):
+    conversation_id = serializers.CharField(source='conversation.public_id')
+
+    class Meta:
+        model = Prompt
+        fields = ('public_id', 'user_prompt', 'response', 'time', 'conversation_id')
+        read_only_fields = ('public_id', 'time')
 
 
 class ConversationSerializer(serializers.ModelSerializer):
@@ -27,3 +36,4 @@ class ConversationSerializer(serializers.ModelSerializer):
             "public_id": obj.model.public_id,
             "name": obj.model.name,
         }
+      
