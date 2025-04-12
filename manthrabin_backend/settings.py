@@ -34,6 +34,7 @@ ALLOWED_HOSTS = []
 
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -57,6 +58,7 @@ HAYSTACK_CONNECTIONS = {
         'ENGINE': 'haystack.backends.simple_backend.SimpleEngine',
     },
 }
+ASGI_APPLICATION = "manthrabin_backend.asgi.application"
 
 
 # email
@@ -102,7 +104,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'manthrabin_backend.wsgi.application'
+# WSGI_APPLICATION = 'manthrabin_backend.wsgi.application'
 
 
 # Database
@@ -153,7 +155,14 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/

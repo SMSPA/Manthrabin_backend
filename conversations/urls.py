@@ -1,14 +1,19 @@
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 from .views import (
+    ConversationViewSet,
     ConversationSearchView,
     PromptsListView,
     PromptCreateView,
     PromptsSearchView
     )
 
-urlpatterns = [
-    # path('', UserConversationsListView.as_view(), name='user-conversations-list'),
 
+router = DefaultRouter()
+router.register(r'', ConversationViewSet, basename='conversation')
+
+urlpatterns = [
+    *router.urls,
     path('<uuid:conversation_id>/prompts/', PromptsListView.as_view(), name='conversation-prompts-list'),
     path('<uuid:conversation_id>/prompts/create/', PromptCreateView.as_view(), name='prompt-create'),
 

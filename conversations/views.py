@@ -3,7 +3,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from haystack.query import SearchQuerySet
 from django.db.models import Q
 from .models import Conversation, Prompt
@@ -11,7 +11,19 @@ from .serializers import ConversationSerializer, PromptSerializer
 from documents.views import AdminOnlyPermission
 from rest_framework.pagination import LimitOffsetPagination
 
+class ConversationViewSet(viewsets.ModelViewSet):
+    serializer_class = ConversationSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'public_id'
+    pagination_class = LimitOffsetPagination
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        return Conversation.objects.filter(user=self.request.user)
+
+      
 class PromptsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = PromptSerializer
