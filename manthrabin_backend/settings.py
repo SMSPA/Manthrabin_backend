@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'haystack',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -50,6 +49,7 @@ INSTALLED_APPS = [
     'documents',
     'drf_spectacular',
     'drf_spectacular_sidecar',
+    'haystack',
 ]
 
 HAYSTACK_CONNECTIONS = {
@@ -181,3 +181,13 @@ ASGI_APPLICATION = 'manthrabin_backend.asgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.elasticsearch7_backend.Elasticsearch7SearchEngine',
+        'URL': 'http://127.0.0.1:9200',
+        'INDEX_NAME': 'Manthrabin',
+    },
+}
+
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
