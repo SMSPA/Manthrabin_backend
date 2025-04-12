@@ -169,8 +169,7 @@ class RequestResetPasswordView(APIView):
             token = token_generator.make_token(user)
             reset = PasswordReset(email=email, token=token)
             reset.save()
-            # reset_url = f"{os.environ['PASSWORD_RESET_BASE_URL']}/{token}"
-            reset_url = f"127.0.0.1:8000/api/user/reset-password/{token}"
+            reset_url = f"127.0.0.1:3000/reset-password/{token}"
 
             send_mail(
                 subject="Password Reset Request",
