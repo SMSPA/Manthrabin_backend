@@ -5,6 +5,7 @@ from django.http import FileResponse
 import logging # TODO: improve usage of logging 
 from .models import Document
 from .serializers import DocumentSerializer
+from .elastic import add_docs_pipeline, delete_docs_pipeline, es_client
 
 
 class AdminOnlyPermission(permissions.BasePermission):
@@ -16,9 +17,9 @@ class AdminOnlyPermission(permissions.BasePermission):
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
-    permission_classes = [permissions.IsAdminUser] # TODO: Change to AdminOnlyPermission
-    # permission_classes = [AdminOnlyPermission]
+    permission_classes = [AdminOnlyPermission]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    lookup_field = 'public_id'
 
     logger = logging.getLogger(__name__)
 
@@ -26,10 +27,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if not serializer.validated_data.get('file'):
             raise serializers.ValidationError({"file": "File is required."})
         self.logger.info("Creating a new document.")
-        serializer.save()
+        document = serializer.save()
+        file_path = document.file.path
+        add_docs_pipeline(file_path)
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
-    def download(self, request, pk=None):
+    def download(self, request, public_id=None):
         document = self.get_object()
         try:
             with document.file.open() as file:
@@ -42,7 +45,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             return Response({"error": "File not found."}, status=404)
 
     @action(detail=True, methods=['get'], url_path='info')
-    def get_document_info(self, request, pk=None):
+    def get_document_info(self, request, public_id=None):
         document = self.get_object()
         serializer = self.get_serializer(document)
         return Response(serializer.data)
@@ -56,7 +59,30 @@ class DocumentViewSet(viewsets.ModelViewSet):
         return super().retrieve(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.logger.warning(f"Deleting document with ID {instance.id}.")
+        try:
+            instance = Document.objects.get()
+        except Document.DoesNotExist:
+            return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        self.logger.warning(f"Deleting document with public ID {instance.public_id}.")
+
+        try:
+            index_name = "manthrabin"
+            query_body = {
+                "query": {
+                    "term": {"uuid": instance.uuid}
+                },
+                "_source": ["uuid"]
+            }
+            response = es_client.search(index=index_name, body=query_body)
+            uuids = [hit['_source']['uuid'] for hit in response['hits']['hits']]
+
+            delete_docs_pipeline(uuids)
+        except Exception as e:
+            self.logger.error(f"Failed to delete document from elastic database: {e}")
+            return Response({"error": "Failed to delete document from elastic database."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        instance.file.delete(save=False)
         instance.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+
+        return Response({"message": "Document deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
