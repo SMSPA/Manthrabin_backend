@@ -10,6 +10,7 @@ from .models import Conversation, Prompt
 from .serializers import ConversationSerializer, PromptSerializer
 from documents.views import AdminOnlyPermission
 from rest_framework.pagination import LimitOffsetPagination
+from .websocket.rag_util import simple_chat
 
 class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
@@ -36,7 +37,7 @@ class PromptsListView(generics.ListAPIView):
 
 
 class PromptCreateView(generics.CreateAPIView):
-    permission_classes = [AdminOnlyPermission]
+    permission_classes = [IsAuthenticated]
     serializer_class = PromptSerializer
 
     def perform_create(self, serializer):
@@ -44,8 +45,10 @@ class PromptCreateView(generics.CreateAPIView):
         conversation = get_object_or_404(Conversation, public_id=conversation_id, user=self.request.user)
 
         if conversation.user != self.request.user:
-            raise PermissionDenied("You do not have permission to add a prompt to this conversation.")
-        serializer.save()
+            raise PermissionDenied("invalid conversation.")
+            prompt = serializer.validated_data.get('user_prompt')
+            response = simple_chat(prompt, conversation.public_id)
+            serializer.save(conversation=conversation, response=response)
 
 
 class ConversationSearchView(APIView):

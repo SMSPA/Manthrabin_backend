@@ -3,12 +3,12 @@ from .models import Conversation, Prompt, LLMModel
 
 
 class PromptSerializer(serializers.ModelSerializer):
-    conversation_id = serializers.CharField(source='conversation.public_id')
+    conversation_id = serializers.CharField(source='conversation.public_id',read_only=True)
 
     class Meta:
         model = Prompt
         fields = ('public_id', 'user_prompt', 'response', 'time', 'conversation_id')
-        read_only_fields = ('public_id', 'time')
+        read_only_fields = ('public_id','response' ,'time')
 
 
 class ConversationSerializer(serializers.ModelSerializer):

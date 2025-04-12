@@ -29,6 +29,6 @@ def simple_chat(
 
     chain = prompt | llm | StrOutputParser()
 
-    return chain.stream(user_prompt)
-
+    # return chain.stream(user_prompt)
+    return chain.invoke(user_prompt)
 
