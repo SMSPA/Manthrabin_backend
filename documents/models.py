@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.core.validators import FileExtensionValidator
 from django.core.exceptions import ValidationError
@@ -10,9 +11,10 @@ class Document(models.Model):
             raise ValidationError("File size cannot exceed 10MB.")
 
     id = models.AutoField(primary_key=True)
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     title = models.TextField(max_length=50)
     file = models.FileField(
-        upload_to='documents/%Y/%m/%d/',
+        upload_to='documents/',
         validators=[
             FileExtensionValidator(allowed_extensions=['pdf', 'docx', 'doc', 'txt', 'pptx', 'xlsx']),
             validate_file_size,
