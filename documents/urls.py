@@ -5,7 +5,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 router = DefaultRouter()
-router.register(r'documents', DocumentViewSet, basename='document')
+router.register(r'', DocumentViewSet, basename='document')
 
 urlpatterns = [
     path('', include(router.urls)),

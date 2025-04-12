@@ -1,24 +1,31 @@
-import datetime
-from haystack import indexes, connections
-from .models import Conversations
+from haystack import indexes
+from .models import Prompt, Conversation
 
 
-class ConversationsIndex(indexes.SearchIndex, indexes.Indexable):
+class ConversationIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True, use_template=True)
-    prompt = indexes.CharField(model_attr='prompt')
-    response = indexes.CharField(model_attr='response')
+    public_id = indexes.CharField(model_attr='public_id')
+    title = indexes.CharField(model_attr='title')
+    user_id = indexes.IntegerField(model_attr='user_id')
 
     def get_model(self):
-        return Conversations
+        return Conversation
 
     def index_queryset(self, using=None):
-        """Used when the entire index for model is updated."""
-        return self.get_model().objects.filter(created_at__lte=datetime.datetime.now())
+        return self.get_model().objects.all()
 
 
-def update_index(instance):
-    connections['default'].get_unified_index().get_index(type(instance)).update_object(instance)
+class PromptIndex(indexes.SearchIndex, indexes.Indexable):
+    text = indexes.CharField(document=True, use_template=True)
 
+    public_id = indexes.CharField(model_attr='public_id')
+    user_prompt = indexes.CharField(model_attr='user_prompt')
+    response = indexes.CharField(model_attr='response')
+    time = indexes.DateTimeField(model_attr='time')
+    conversation_public_id = indexes.CharField(model_attr='conversation.public_id')
 
-def remove_from_index(instance):
-    connections['default'].get_unified_index().get_index(type(instance)).remove_object(instance)
+    def get_model(self):
+        return Prompt
+
+    def index_queryset(self, using=None):
+        return self.get_model().objects.all()

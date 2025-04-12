@@ -1,0 +1,25 @@
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+DB_PASSWORD = "password"
+DB_USER = "user"
+EMAIL_HOST_USER = "user@gmail.com"
+EMAIL_HOST_PASSWORD = "app password"
+DB_CONFIG = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+    # UNCOMMENT this part if you are not using sqlite
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': 'manthrabin',
+    #     'USER': config.DB_USER,
+    #     'PASSWORD': config.DB_PASSWORD,
+    #     'HOST': '127.0.0.1',
+    #     'PORT': '3306',
+    # }
+
+}
