@@ -2,12 +2,7 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from os import getenv
-from dotenv import load_dotenv
-from pathlib import Path
 
-
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
-print("Key:", getenv("OPENROUTER_API_KEY"))
 
 # Example of using it in a chain
 template = """Your a Persian AI assistant how answer the question. Remember you must answer the question by Persian language

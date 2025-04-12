@@ -42,7 +42,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         print("received", text_data)
-        await self.send("helllp")
         if text_data:
             gen = await asyncio.to_thread(simple_chat, text_data, self.conversation_public_id)
             for chunk in gen:
