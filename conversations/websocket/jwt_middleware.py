@@ -9,8 +9,7 @@ class JWTAuthMiddleware(BaseMiddleware):
     async def __call__(self, scope, receive, send):
 
         token = self.get_token_from_scope(scope)
-
-        if token != None:
+        if token is not None:
             user_id = await self.get_user_from_token(token)
             if user_id:
                 scope['user_id'] = user_id
@@ -18,7 +17,7 @@ class JWTAuthMiddleware(BaseMiddleware):
             else:
                 scope['error'] = 'Invalid token'
 
-        if token == None:
+        if token is None:
             scope['error'] = 'token not provided'
 
         return await super().__call__(scope, receive, send)
