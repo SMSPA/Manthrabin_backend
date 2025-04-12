@@ -16,11 +16,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.conversation_public_id = None
 
     async def connect(self):
-        print('connecting to ws')
         user_id = self.scope.get('user_id', None)
 
         if 'error' in self.scope:
-            print(self.scope['error'])
             await self.close(code=4001)
 
         self.conversation_public_id = self.scope['url_route']['kwargs']['conversation_public_id']
@@ -47,9 +45,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             for chunk in gen:
                 await self.send(text_data=chunk)
 
+        if prompt:
+            # response = await self.process_prompt(prompt)
+            response= ("SOS")
+            await self.send(text_data=json.dumps({
+                'response': response
+            }))
 
     @database_sync_to_async
     def is_valid_conversation(self, user_id, conversation_public_id):
+        # Check if the conversation exists and belongs to the user
         try:
             Conversation.objects.get(public_id=conversation_public_id, user_id=user_id)
             return True

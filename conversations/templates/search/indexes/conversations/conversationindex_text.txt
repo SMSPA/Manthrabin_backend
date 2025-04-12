@@ -1,0 +1,5 @@
+{{ object.title }}
+{% for prompt in object.prompts.all %}
+{{ prompt.user_prompt }}
+{{ prompt.response }}
+{% endfor %}
