@@ -33,16 +33,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def download(self, request, public_id=None):
-        document = self.get_object()
         try:
-            with document.file.open() as file:
-                return FileResponse(
-                    file,
-                    as_attachment=True,
-                    filename=document.file.name.split('/')[-1]
-                )
-        except FileNotFoundError:
-            return Response({"error": "File not found."}, status=404)
+            document = self.get_object()
+            if not document.file:
+                return Response({"error": "No file associated with this document."}, status=404)
+            
+            response = FileResponse(
+                document.file,
+                as_attachment=True,
+                filename=document.file.name.split('/')[-1]
+            )
+            response['Content-Length'] = document.file.size
+            return response
+        except Document.DoesNotExist:
+            return Response({"error": "Document not found."}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
 
     @action(detail=True, methods=['get'], url_path='info')
     def get_document_info(self, request, public_id=None):
@@ -60,27 +67,27 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         try:
-            instance = Document.objects.get()
+            instance = self.get_object()
         except Document.DoesNotExist:
             return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
 
         self.logger.warning(f"Deleting document with public ID {instance.public_id}.")
 
-        try:
-            index_name = "manthrabin"
-            query_body = {
-                "query": {
-                    "term": {"uuid": instance.uuid}
-                },
-                "_source": ["uuid"]
-            }
-            response = es_client.search(index=index_name, body=query_body)
-            uuids = [hit['_source']['uuid'] for hit in response['hits']['hits']]
+        # try:
+        #     index_name = "manthrabin"
+        #     query_body = {
+        #         "query": {
+        #             "term": {"uuid": instance.public_id}
+        #         },
+        #         "_source": ["uuid"]
+        #     }
+        #     response = es_client.search(index=index_name, body=query_body)
+        #     uuids = [hit['_source']['uuid'] for hit in response['hits']['hits']]
 
-            delete_docs_pipeline(uuids)
-        except Exception as e:
-            self.logger.error(f"Failed to delete document from elastic database: {e}")
-            return Response({"error": "Failed to delete document from elastic database."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        #     delete_docs_pipeline(uuids)
+        # except Exception as e:
+        #     self.logger.error(f"Failed to delete document from elastic database: {e}")
+        #     return Response({"error": "Failed to delete document from elastic database."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         instance.file.delete(save=False)
         instance.delete()
