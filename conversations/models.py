@@ -9,7 +9,7 @@ class LLMModel(models.Model):
 
 
 class Conversation(models.Model):
-    publicID = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     title = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -18,7 +18,7 @@ class Conversation(models.Model):
 
 
 class Prompt(models.Model):
-    publicID = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     user_prompt = models.TextField()
     response = models.TextField()
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="prompts")
