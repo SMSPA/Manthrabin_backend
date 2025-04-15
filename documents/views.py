@@ -5,7 +5,8 @@ from django.http import FileResponse
 import logging # TODO: improve usage of logging 
 from .models import Document
 from .serializers import DocumentSerializer
-from .elastic import add_docs_pipeline, delete_docs_pipeline, es_client
+# TODO: add docker-compose then uncomment this line
+# from .elastic import add_docs_pipeline, delete_docs_pipeline, es_client
 
 
 class AdminOnlyPermission(permissions.BasePermission):
@@ -29,7 +30,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         self.logger.info("Creating a new document.")
         document = serializer.save()
         file_path = document.file.path
-        add_docs_pipeline(file_path)
+        # add_docs_pipeline(file_path)
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def download(self, request, public_id=None):

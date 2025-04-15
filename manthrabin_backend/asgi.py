@@ -16,8 +16,9 @@ from conversations.websocket.jwt_middleware import JWTAuthMiddleware
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    "websocket": JWTAuthMiddleware(
-        URLRouter(
-            routing.websocket_urlpatterns)
-    ),
+    # QUICKFIX: UNCOMMENT when websocket is implemented
+    # "websocket": JWTAuthMiddleware(
+    #     URLRouter(
+    #         routing.websocket_urlpatterns)
+    # ),
 })
