@@ -7,18 +7,17 @@ For more information on this file, see
 https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/
 """
 import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "manthrabin_backend.settings")
+# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "manthrabin_backend.settings")
 
-from conversations import routing
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from conversations.websocket.jwt_middleware import JWTAuthMiddleware
+import conversations.routing
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    # QUICKFIX: UNCOMMENT when websocket is implemented
-    # "websocket": JWTAuthMiddleware(
-    #     URLRouter(
-    #         routing.websocket_urlpatterns)
-    # ),
+    "websocket": JWTAuthMiddleware(
+        URLRouter(
+            conversations.routing.websocket_urlpatterns)
+    ),
 })
