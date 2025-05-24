@@ -1,0 +1,83 @@
+x-django: &default-django
+  image: ${BACKEND_IMAGE_NAME:-manthrabin-backend}:${BACKEND_IMAGE_TAG:?error}
+  build:
+    context: .
+    args:
+      - DEBUG=${DEBUG:-false}
+    tags:
+      - "${BACKEND_IMAGE_NAME:-manthrabin-backend}:${BACKEND_IMAGE_TAG:?error}"
+
+  env_file: 
+    - path: ".env.production"
+      required: true
+    - path: ".env.local"
+      required: false
+
+  depends_on:
+    mysql:
+      condition: service_healthy
+      restart: true
+
+  healthcheck:
+    test: ["CMD", "curl", "-f", "${DJANGO_HEALTHCHECK_URL:-127.0.0.1:8000/health}"]
+    start_period: 10s
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+  restart: "${DOCKER_RESTART_POLICY:-always}"
+
+  ports:
+    - "${DJANGO_CONTAINER_HOST:-127.0.0.1}:${DJANGO_CONTAINER_PORT:-8000}:8000"
+
+  volumes:
+    - static_volume:/app/static
+    - media_volume:/app/media
+
+services:
+  mysql:
+    container_name: mysql
+    image: ${DB_IMAGE_NAME:?error}:${DB_IMAGE_TAG:?error}
+    user: "${MYSQL_USER:-mysql}"
+
+    env_file: 
+      - path: ".env.production"
+        required: true
+      - path: ".env.local"
+        required: false
+
+    restart: "${DOCKER_RESTART_POLICY:-always}"
+
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD", "bash", "-c",
+            "mariadb-admin ping -h localhost --password=${MYSQL_ROOT_PASSWORD} --silent \
+            && mariadb -h localhost -uroot -p${MYSQL_ROOT_PASSWORD} -e 'SELECT 1;'"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  backend:
+    <<: *default-django
+    container_name: backend-django
+    profiles:
+      - production
+
+
+  backend-dev:
+    <<: *default-django
+    command: ["--host", "127.0.0.1", "--port", "8000", "--reload"]
+    container_name: back-end
+    profiles:
+      - dev
+
+
+volumes:
+  mariadb_data:
+  static_volume:
+  media_volume:
