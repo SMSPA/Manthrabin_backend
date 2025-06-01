@@ -1,34 +1,28 @@
 import json
 
-from Demos.FileSecurityTest import permissions
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from pyasn1.debug import scope
 import asyncio
 
 from .rag_util import simple_chat
-from conversations.models import Conversation
+from conversations.models import Conversation,Prompt
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
-        self.conversation_public_id = None
+        self.conversation=None
 
     async def connect(self):
-        user_id = self.scope.get('user_id', None)
+        user = self.scope.get('user', None)
 
-        if 'error' in self.scope:
-            await self.close(code=4001)
-
-        self.conversation_public_id = self.scope['url_route']['kwargs']['conversation_public_id']
-
-        if user_id is None:
-            print("invalid user_id")
+        if not user.is_authenticated:
+            print("Oh No")
             await self.close(code=4001)
             return
-
-        if not await self.is_valid_conversation(user_id, self.conversation_public_id):
+        conversation_public_id= self.scope['url_route']['kwargs']['conversation_public_id']
+        self.conversation = await self.is_valid_conversation(user, conversation_public_id)
+        if self.conversation is None:
             print("invalid conversation")
             await self.close(code=4003)
             return
@@ -41,24 +35,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         print("received", text_data)
         if text_data:
-            gen = await asyncio.to_thread(simple_chat, text_data, self.conversation_public_id)
+            gen = await asyncio.to_thread(simple_chat, text_data, self.conversation.public_id)
+            response=""
             for chunk in gen:
+                response += chunk
                 await self.send(text_data=chunk)
-
-        if prompt:
-            # response = await self.process_prompt(prompt)
-            response= ("SOS")
-            await self.send(text_data=json.dumps({
-                'response': response
-            }))
+            await self.save_message(response,text_data)
 
     @database_sync_to_async
-    def is_valid_conversation(self, user_id, conversation_public_id):
-        # Check if the conversation exists and belongs to the user
+    def is_valid_conversation(self, user, conversation_public_id):
         try:
-            Conversation.objects.get(public_id=conversation_public_id, user_id=user_id)
-            return True
+            conversation=Conversation.objects.get(public_id=conversation_public_id, user=user)
+            return conversation
         except Conversation.DoesNotExist:
-            return False
+            return None
     def get_chunks(self,prompt):
-        return simple_chat(prompt, sessionID=self.conversation_public_id)
+        return simple_chat(prompt, sessionID=self.scope['conversation_publicId'])
+
+    @database_sync_to_async
+    def save_message(self, response, text):
+        return Prompt.objects.create(
+            user_prompt=text,
+            response=response,
+            conversation=self.conversation,
+
+        )

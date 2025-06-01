@@ -21,14 +21,16 @@ def simple_chat(
         sessionID: str,
         model: str = "google/gemini-2.0-flash-exp:free"
 ):
-    llm = ChatOpenAI(
-        openai_api_key=getenv("OPENROUTER_API_KEY"),
-        openai_api_base=getenv("OPENROUTER_BASE_URL"),
-        model_name=model,
+    llm = llm = ChatOpenAI(
+        model="gpt-4o",
+        temperature=0,
+        openai_api_key=getenv("OPENAI_API_KEY"),
+        # openai_api_base=getenv("OPENROUTER_BASE_URL"),
+        # model_name=model,
     )
 
     chain = prompt | llm | StrOutputParser()
 
-    # return chain.stream(user_prompt)
-    return chain.invoke(user_prompt)
+    return chain.stream(user_prompt)
+    # return chain.invoke(user_prompt)
 
