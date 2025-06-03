@@ -118,7 +118,11 @@ TEMPLATES = [
 
 DATABASES = config.DB_CONFIG
 
-
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=30),  # Change this as needed
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
