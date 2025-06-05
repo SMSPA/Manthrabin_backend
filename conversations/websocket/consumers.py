@@ -36,11 +36,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         print("received", text_data)
         if text_data:
             gen = await asyncio.to_thread(simple_chat, text_data, self.conversation.public_id)
-            response=""
+            full_response_for_db = ""
             for chunk in gen:
-                response += chunk
-                await self.send(text_data=chunk)
-            await self.save_message(response,text_data)
+                full_response_for_db += chunk
+                await self.send(text_data=chunk) # Send data chunk
+
+            # After sending all data chunks, send an end-of-stream signal
+            await self.send(text_data=json.dumps({"type": "stream_end", "conversation_id": str(self.conversation.public_id)}))
+            print(f"Sent stream_end signal for conversation {self.conversation.public_id}")
+
+            await self.save_message(full_response_for_db, text_data)
 
     @database_sync_to_async
     def is_valid_conversation(self, user, conversation_public_id):

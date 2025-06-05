@@ -2,7 +2,7 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from os import getenv
-
+from dotenv import load_dotenv
 
 # Example of using it in a chain
 template = """Your a Persian AI assistant how answer the question. Remember you must answer the question by Persian language
@@ -21,6 +21,7 @@ def simple_chat(
         sessionID: str,
         model: str = "google/gemini-2.0-flash-exp:free"
 ):
+    load_dotenv()
     llm = llm = ChatOpenAI(
         model="gpt-4o",
         temperature=0,
