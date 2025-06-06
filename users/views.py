@@ -5,6 +5,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.conf import settings
+from django.http import JsonResponse
+from django.db import connections
 
 from .models import User, Interest, UserInterest, PasswordReset
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -49,7 +51,7 @@ class LoginView(APIView):
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
-                'user': self.serializer_class(user).data
+                'user': UserSerializer(user).data
             })
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -228,3 +230,16 @@ class UpdateAccountTypeView(APIView):
             serializer.save()
             return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def HealthCheckView(request):
+    try:
+        with connections['default'].cursor() as cursor:
+            cursor.execute("SELECT 1;")
+    except Exception as e:
+        return JsonResponse(
+            {"status": "fail", "error": str(e)},
+            status=500
+        )
+
+    return JsonResponse({"status": "ok"})

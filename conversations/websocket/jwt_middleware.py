@@ -5,6 +5,8 @@ from channels.db import database_sync_to_async
 
 from users.models import User
 
+from urllib.parse import parse_qs
+
 
 class JWTAuthMiddleware(BaseMiddleware):
 
@@ -20,8 +22,8 @@ class JWTAuthMiddleware(BaseMiddleware):
 
     def get_token_from_scope(self, scope):
         headers = dict(scope.get("headers", []))
-
         auth_header = headers.get(b'authorization')
+
         if auth_header:
             try:
                 auth_header = auth_header.decode('utf-8')
@@ -29,6 +31,14 @@ class JWTAuthMiddleware(BaseMiddleware):
                 return None
             if auth_header.startswith('Bearer '):
                 return auth_header.split(' ')[1]
+
+        # Fallback to check query string
+        query_string = scope.get('query_string', b'').decode('utf-8')
+        params = dict(qc.split("=") for qc in query_string.split("&") if "=" in qc)
+        token = params.get('token')
+        if token:
+            return token
+
         return None
 
     @database_sync_to_async

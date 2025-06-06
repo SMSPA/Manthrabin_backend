@@ -134,6 +134,9 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
+!.env.dev
+!.env.production.example
 .venv
 env/
 venv/
@@ -176,3 +179,4 @@ cython_debug/
 .pypirc
 
 .vscode/
+.env.production
