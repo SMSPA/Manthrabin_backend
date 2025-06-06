@@ -1,12 +1,13 @@
 from django.urls import path
 from .views import RegisterView, LoginView, HomeView, UsersListView, RequestResetPasswordView, InterestListView, \
-    SaveUserInterestsView, UserProfileView, ChangePasswordView, ResetPasswordView, UpdateAccountTypeView
+    SaveUserInterestsView, UserProfileView, ChangePasswordView, ResetPasswordView, UpdateAccountTypeView, UserBlockView
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('home/', HomeView.as_view(), name='home'),
     path("users/", UsersListView.as_view(), name="users_list"),
+    path("status/<uuid:user_id>/", UserBlockView.as_view(), name="change-user-status"),
     path("users/<uuid:pk>/update-account-type/",
          UpdateAccountTypeView.as_view(), name="update_account_type"),
     path("interests/", InterestListView.as_view(), name="interests"),

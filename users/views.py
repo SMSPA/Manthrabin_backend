@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,6 +11,8 @@ from django.db import connections
 
 from .models import User, Interest, UserInterest, PasswordReset
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+
+from .permissions import IsAdminUserType
 from .serializers import \
     HomeSerializer, LoginInputSerializer, \
     RegisterSerializer, UserSerializer, \
@@ -67,17 +70,25 @@ class HomeView(APIView):
 
 class UsersListView(APIView):
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsAdminUserType]
 
     def get(self, request):
-        # Only allow access if the user is an Admin
-        if request.user.AccountType != "Admin":
-            return Response({"error": "Access denied"}, status=status.HTTP_403_FORBIDDEN)
-
         users = User.objects.all()
         serializer = self.serializer_class(users, many=True)
         return Response(serializer.data)
 
+class UserBlockView(APIView):
+    permission_classes = [IsAuthenticated,IsAdminUserType]
+    def get(self, request, **kwargs):
+        user = get_object_or_404(User, PublicID=kwargs['user_id'])
+        user.IsActive = not user.IsActive
+        user.is_active =  user.IsActive
+        user.save()
+        return Response({
+            'message': f"User {'deactivated' if not user.is_active else 'reactivated'} successfully",
+            'user_id': str(user.PublicID),
+            'is_active': user.IsActive
+        })
 
 class InterestListView(APIView):
     serializer_class = InterestSerializer
@@ -213,13 +224,9 @@ class ResetPasswordView(APIView):
 
 class UpdateAccountTypeView(APIView):
     serializer_class = UpdateAccountTypeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsAdminUserType]
 
     def put(self, request, pk):  # pk for user's PublicID
-        # Only allow access if the user is an Admin
-        if request.user.AccountType != "Admin":
-            return Response({"error": "Access denied. Admins only."}, status=status.HTTP_403_FORBIDDEN)
-
         try:
             user = User.objects.get(PublicID=pk)
         except User.DoesNotExist:
