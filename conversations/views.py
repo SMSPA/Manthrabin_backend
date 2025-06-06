@@ -78,7 +78,7 @@ class CreateConversationLinkView(APIView):
         if conversation.user != self.request.user:
             raise PermissionDenied("invalid conversation.")
         share_link =  self._create_or_update_shared_conversation( conversation)
-        link=f"127.0.0.1:3000/share_conversation/{share_link.public_id}"
+        link=f"127.0.0.1:3000/share/{share_link.public_id}"
 
         try:
             send_mail(
