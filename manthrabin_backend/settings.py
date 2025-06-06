@@ -21,21 +21,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+dotenv_path = str(BASE_DIR / ".env")
+
+if not os.path.isfile(dotenv_path):
+    raise FileNotFoundError(f"Required .env file not found at {dotenv_path}")
+
+load_dotenv(dotenv_path=BASE_DIR/".env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "True")
+DEBUG = os.getenv("DEBUG", "False").lower() in ("true","1")
 if DEBUG:
-    load_dotenv(dotenv_path=BASE_DIR/".env.dev")
-    SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-i)wkb3_rilc6e2q1fb@72o7%gt*q^wzo^jla!f8)k5r2li^*(t')
+    ALLOWED_HOSTS = ['*']
+    SECRET_KEY = 'django-insecure-i)wkb3_rilc6e2q1fb@72o7%gt*q^wzo^jla!f8)k5r2li^*(t'
 else:
-    load_dotenv(dotenv_path=BASE_DIR/".env.production")
+    ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS').split(',')
     SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
-
-
-
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
-
 
 
 INSTALLED_APPS = [
@@ -55,7 +56,7 @@ INSTALLED_APPS = [
     'documents',
     'drf_spectacular',
     'drf_spectacular_sidecar',
-    'haystack',
+    'django_elasticsearch_dsl',
 ]
 
 HAYSTACK_CONNECTIONS = {
@@ -217,4 +218,11 @@ STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
+}
+
+ELASTICSEARCH_DSL={
+    'default': {
+        'hosts': os.environ.get('ES_URL', 'localhost') + ':' + os.environ.get('ES_PORT', '9200'),
+        'http_auth': (os.environ.get('ES_USER', 'elastic'), os.environ.get('ES_PASS', '12345678'))
+    }
 }

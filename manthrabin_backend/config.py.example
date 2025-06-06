@@ -5,8 +5,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 DB_PASSWORD = "password"
 DB_USER = "user"
-EMAIL_HOST_USER = "user@gmail.com"
-EMAIL_HOST_PASSWORD = "app password"
+
+EMAIL_HOST_USER = "wdev.object.storage@gmail.com"
+EMAIL_HOST_PASSWORD = ""
+
 DB_CONFIG = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
