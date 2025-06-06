@@ -1,6 +1,8 @@
 import uuid
+from smtplib import SMTPException
 from uuid import uuid4
 
+from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +11,8 @@ from rest_framework.response import Response
 from rest_framework import generics, status, viewsets
 from haystack.query import SearchQuerySet
 from django.db.models import Q
+
+from manthrabin_backend import settings
 from .models import Conversation, Prompt, SharedConversation
 from .serializers import ConversationSerializer, PromptSerializer
 from documents.views import AdminOnlyPermission
@@ -56,18 +60,54 @@ class PromptCreateView(generics.CreateAPIView):
 class CreateConversationLinkView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, **kwargs):
+    def get(self, request, **kwargs):
         conversation_public_id= kwargs.get('conversation_id')
         conversation = get_object_or_404(Conversation, public_id=conversation_public_id)
-
         if conversation.user != self.request.user:
             raise PermissionDenied("invalid conversation.")
-        last_prompt=conversation.prompts.first()
+        share_link = self._create_or_update_shared_conversation(conversation)
+        return Response(
+            {
+                "share_link": str(share_link.public_id),
+                "conversation_id": str(conversation.public_id),
+            },
+            status=200)
+
+    def post(self, request, **kwargs):
+        email = request.data.get('email')
+        conversation_public_id = kwargs.get('conversation_id')
+        conversation = get_object_or_404(Conversation, public_id=conversation_public_id)
+        if conversation.user != self.request.user:
+            raise PermissionDenied("invalid conversation.")
+        share_link =  self._create_or_update_shared_conversation( conversation)
+        link=f"127.0.0.1:3000/share_conversation/{share_link.public_id}"
+
         try:
-            share_link=SharedConversation.objects.get(conversation=conversation)
+            send_mail(
+                subject= f"Manthrabin Shared Conversation",
+                message=f"Click the link below to access conversation :\n{link}",
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[email],
+                fail_silently=False,
+
+            )
+        except SMTPException as e:
+            return Response(
+                {"error": "Failed to send email.", "details": str(e)},
+                status=502
+            )
+
+        return Response({
+            "message": f"Share link sent to {email}."
+        }, status=200)
+
+    def _create_or_update_shared_conversation(self, conversation):
+        last_prompt = conversation.prompts.first()
+        try:
+            share_link = SharedConversation.objects.get(conversation=conversation)
             if share_link.last_prompt != last_prompt:
-                share_link.last_prompt=last_prompt
-                share_link.public_id= uuid.uuid4()
+                share_link.last_prompt = last_prompt
+                share_link.public_id = uuid.uuid4()
                 share_link.save()
         except SharedConversation.DoesNotExist:
             share_link = SharedConversation.objects.create(
@@ -75,8 +115,10 @@ class CreateConversationLinkView(APIView):
                 last_prompt=last_prompt,
             )
             share_link.save()
-        #ddfddfdddddddddddddddddddddddddddddddddddddddddddddddddddf
-        return Response(f"'link':'{share_link.public_id}'")
+        return share_link
+
+
+
 class ShareConversationView(APIView):
     permission_classes = [IsAuthenticated]
 
