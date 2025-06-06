@@ -46,7 +46,7 @@ vector_store = ElasticsearchStore(
     es_params={"verify_certs": False}  # Useful for local/dev environments
 )
 es = Elasticsearch(
-    hosts=["http://localhost:9200"]  # replace with your server's URL if not localhost
+    hosts=[os.getenv("ES_SCHEMA")+"://"+os.getenv("ES_URL")+":"+os.getenv("ES_PORT")]
 )
 
 # Step 4: Define logic for retrieving related documents using similarity search
