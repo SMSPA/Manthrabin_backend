@@ -2,11 +2,12 @@ from rest_framework import viewsets, permissions, parsers, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.http import FileResponse
+from django.core.exceptions import ValidationError
 import logging # TODO: improve usage of logging 
 from .models import Document
 from .serializers import DocumentSerializer
 # TODO: add docker-compose then uncomment this line
-# from .elastic import add_docs_pipeline, delete_docs_pipeline, es_client
+from .elastic import add_docs_pipeline, delete_docs_pipeline, es_client
 
 
 class AdminOnlyPermission(permissions.BasePermission):
@@ -24,20 +25,31 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     logger = logging.getLogger(__name__)
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: DocumentSerializer):
         if not serializer.validated_data.get('file'):
-            raise serializers.ValidationError({"file": "File is required."})
+            return Response({"error": "File format is not valid."},
+                            status=status.HTTP_400_BAD_REQUEST)
         self.logger.info("Creating a new document.")
         document = serializer.save()
         file_path = document.file.path
-        # add_docs_pipeline(file_path)
+        file_public_id = str(document.public_id)
+        try:
+            add_docs_pipeline(file_path, file_public_id)
+        except Exception as e:
+            self.logger.error(f"Failed to add document to Elasticsearch: {e}", exc_info=True)
+            document.delete()
+            self.logger.warning(f"Deleting document with public ID {document.public_id} due to Elasticsearch failure.")
+            raise serializers.ValidationError({"error": "Failed to add document to Elasticsearch."})
+        
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def download(self, request, public_id=None):
         try:
             document = self.get_object()
+            self.logger.warning(f"Downloading document with public ID {document.public_id}.")
             if not document.file:
-                return Response({"error": "No file associated with this document."}, status=404)
+                return Response({"error": "No file associated with this document."},
+                                 status=status.HTTP_404_NOT_FOUND)
             
             response = FileResponse(
                 document.file,
@@ -47,9 +59,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
             response['Content-Length'] = document.file.size
             return response
         except Document.DoesNotExist:
-            return Response({"error": "Document not found."}, status=404)
+            return Response({"error": "Document not found."}, 
+                            status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            self.logger.error(f"Failed to download document: {e}", exc_info=True)
+            raise serializers.ValidationError({"error": "Failed to download document."})
 
 
     @action(detail=True, methods=['get'], url_path='info')
@@ -66,31 +80,14 @@ class DocumentViewSet(viewsets.ModelViewSet):
         self.permission_classes = [permissions.IsAuthenticated]
         return super().retrieve(request, *args, **kwargs)
 
-    def destroy(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-        except Document.DoesNotExist:
-            return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
-
+    def perform_destroy(self, instance):
         self.logger.warning(f"Deleting document with public ID {instance.public_id}.")
+        try:
+            delete_docs_pipeline(str(instance.public_id))
+        except Exception as e:
+            self.logger.error(f"Failed to delete document from elastic database: {e}")
+            return Response({"error": "Failed to delete document from elastic database."},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # try:
-        #     index_name = "manthrabin"
-        #     query_body = {
-        #         "query": {
-        #             "term": {"uuid": instance.public_id}
-        #         },
-        #         "_source": ["uuid"]
-        #     }
-        #     response = es_client.search(index=index_name, body=query_body)
-        #     uuids = [hit['_source']['uuid'] for hit in response['hits']['hits']]
-
-        #     delete_docs_pipeline(uuids)
-        # except Exception as e:
-        #     self.logger.error(f"Failed to delete document from elastic database: {e}")
-        #     return Response({"error": "Failed to delete document from elastic database."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        instance.file.delete(save=False)
         instance.delete()
-
-        return Response({"message": "Document deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
