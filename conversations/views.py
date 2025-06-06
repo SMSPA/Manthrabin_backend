@@ -13,8 +13,8 @@ from haystack.query import SearchQuerySet
 from django.db.models import Q
 
 from manthrabin_backend import settings
-from .models import Conversation, Prompt, SharedConversation
-from .serializers import ConversationSerializer, PromptSerializer
+from .models import Conversation, Prompt, SharedConversation, LLMModel
+from .serializers import ConversationSerializer, PromptSerializer, LLMModelSerializer
 from documents.views import AdminOnlyPermission
 from rest_framework.pagination import LimitOffsetPagination
 from .websocket.rag_util import simple_chat
@@ -213,3 +213,9 @@ class PromptsSearchView(APIView):
             })
 
         return Response(prompts)
+
+
+class LLMModelListView(generics.ListAPIView):
+    queryset = LLMModel.objects.all()
+    serializer_class = LLMModelSerializer
+    permission_classes = [IsAuthenticated]
