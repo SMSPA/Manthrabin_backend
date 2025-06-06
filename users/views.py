@@ -174,7 +174,7 @@ class RequestResetPasswordView(APIView):
             send_mail(
                 subject="Password Reset Request",
                 message=f"Click the link below to reset your password:\n{reset_url}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=settings.EMAIL_HOST_USER,
                 recipient_list=[email],
                 fail_silently=False,
             )
