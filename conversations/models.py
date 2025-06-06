@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import UniqueConstraint
+
 from users.models import User
 import uuid
 
@@ -26,3 +28,10 @@ class Prompt(models.Model):
 
     class Meta:
         ordering = ('-time',)
+
+
+class SharedConversation(models.Model):
+    public_id=models.UUIDField(default=uuid.uuid4, unique=True, editable=True)
+    last_prompt=models.OneToOneField(Prompt, on_delete=models.CASCADE)
+    conversation=models.OneToOneField(Conversation, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now=True)
