@@ -36,7 +36,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-or if it's not the first time you run this project, make sure you installed pip-tools `pip install pip-tools`, and then
+or if it's not the first time you run this project, make sure you installed pip-tools `pip install 'pip-tools==7.4.1'`, and then
 
 ```bash
 pip-sync
