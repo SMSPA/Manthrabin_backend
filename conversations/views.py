@@ -1,6 +1,5 @@
 import uuid
 from smtplib import SMTPException
-from uuid import uuid4
 
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
@@ -15,9 +14,8 @@ from django.db.models import Q
 from manthrabin_backend import settings
 from .models import Conversation, Prompt, SharedConversation, LLMModel
 from .serializers import ConversationSerializer, PromptSerializer, LLMModelSerializer
-from documents.views import AdminOnlyPermission
 from rest_framework.pagination import LimitOffsetPagination
-from .websocket.rag_util import simple_chat
+from rag_utils.chat_util import simple_chat
 
 class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
