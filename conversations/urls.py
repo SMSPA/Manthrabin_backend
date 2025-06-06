@@ -5,8 +5,8 @@ from .views import (
     ConversationSearchView,
     PromptsListView,
     PromptCreateView,
-    PromptsSearchView
-    )
+    PromptsSearchView, CreateConversationLinkView, ShareConversationView
+)
 
 
 router = DefaultRouter()
@@ -20,7 +20,12 @@ urlpatterns = [
     path('<uuid:conversation_id>/prompts/create/',
          PromptCreateView.as_view(),
          name='prompt-create'),
-
+    path('<uuid:conversation_id>/share/',
+         CreateConversationLinkView.as_view(),
+         name = 'share-conversation'),
+path('share/<uuid:share_id>/',
+         ShareConversationView.as_view(),
+         name = 'share-conversation'),
     path(
         'search/',
         ConversationSearchView.as_view(),
