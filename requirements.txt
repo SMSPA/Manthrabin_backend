@@ -9,6 +9,7 @@ attrs==25.3.0
 autobahn==24.4.2
 Automat==24.8.1
 backoff==2.2.1
+build==1.2.2.post1
 certifi==2025.1.31
 cffi==1.17.1
 channels==4.2.2
@@ -21,13 +22,15 @@ dataclasses-json==0.6.7
 distro==1.9.0
 Django==5.2
 django-cors-headers==4.7.0
+django-elasticsearch-dsl==8.0
 django-haystack==3.3.0
 djangorestframework==3.15.2
 djangorestframework_simplejwt==5.5.0
 drf-spectacular==0.28.0
 drf-spectacular-sidecar==2025.4.1
 elastic-transport==8.17.1
-elasticsearch==8.17.2
+elasticsearch==8.18.1
+elasticsearch-dsl==8.18.0
 exceptiongroup==1.2.2
 frozenlist==1.5.0
 greenlet==3.1.1
@@ -68,6 +71,7 @@ numpy==2.2.4
 openai==1.72.0
 orjson==3.10.16
 packaging==24.2
+pip-tools==7.4.1
 posthog==3.24.1
 propcache==0.3.1
 pyasn1==0.6.1
@@ -79,6 +83,7 @@ pydantic_core==2.33.1
 PyJWT==2.9.0
 pyOpenSSL==25.0.0
 pypdf==5.4.0
+pyproject_hooks==1.2.0
 pysolr==3.10.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
