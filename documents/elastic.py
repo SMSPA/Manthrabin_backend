@@ -9,6 +9,9 @@ from elasticsearch import Elasticsearch
 
 
 es_client = Elasticsearch(hosts=[f"{getenv('ES_SCHEMA')}://{getenv('ES_URL')}:{getenv('ES_PORT')}"])
+index_name = getenv('ES_INDEX', 'manthrabin')
+if not es_client.indices.exists(index=index_name):
+    es_client.indices.create(index=index_name)
 
 embeddings = OpenAIEmbeddings(model='text-embedding-3-small')
 
