@@ -40,4 +40,20 @@ class ConversationSerializer(serializers.ModelSerializer):
             "public_id": obj.model.public_id,
             "name": obj.model.name,
         }
-      
+
+
+class PromptMatchSerializer(serializers.Serializer):
+    prompt_id = serializers.UUIDField(format='hex', read_only=True)
+    user_prompt = serializers.CharField()
+    response = serializers.CharField()
+    time = serializers.DateTimeField()
+
+
+class ConversationSearchSerializer(serializers.Serializer):
+    conversation_id = serializers.UUIDField(format='hex', read_only=True)
+    title = serializers.CharField()
+    matching_prompts = PromptMatchSerializer(many=True)
+
+
+class PromptSearchSerializer(serializers.Serializer):
+    prompt_id = serializers.UUIDField(format='hex', read_only=True)
