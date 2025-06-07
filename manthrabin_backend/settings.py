@@ -38,6 +38,9 @@ else:
     ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS').split(',')
     SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
+ES_URL = os.environ.get('ES_URL', 'localhost')
+ES_PORT = os.environ.get('ES_PORT', '9200')
+ES_SCHEMA = os.environ.get('ES_SCHEMA', 'http')
 
 INSTALLED_APPS = [
     'daphne',
@@ -222,7 +225,7 @@ STORAGES = {
 
 ELASTICSEARCH_DSL={
     'default': {
-        'hosts': os.environ.get('ES_URL', 'localhost') + ':' + os.environ.get('ES_PORT', '9200'),
+        'hosts': f'{ES_SCHEMA}://{ES_URL}:{ES_PORT}',
         'http_auth': (os.environ.get('ES_USER', 'elastic'), os.environ.get('ES_PASS', '12345678'))
     }
 }
