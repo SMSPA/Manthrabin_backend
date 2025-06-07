@@ -1,11 +1,13 @@
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.core.validators import EmailValidator, MinLengthValidator
+
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, first_name, last_name, password=None):
-        if not email:
-            raise ValueError("Users must have an email address")
+    def create_user(self, email, first_name, last_name, password):
+        if not email or not email.strip():
+           raise ValueError("Users must have an email address")
         email = self.normalize_email(email)
         user = self.model(email=email, first_name=first_name, last_name=last_name)
         user.set_password(password)
@@ -28,7 +30,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
-    password = models.CharField(max_length=255)
     AccountType = models.CharField(max_length=10, choices=[('Admin', 'Admin'), ('User', 'User')], default='User')
     IsActive = models.BooleanField(default=True)
     Created_at = models.DateTimeField(auto_now_add=True)
