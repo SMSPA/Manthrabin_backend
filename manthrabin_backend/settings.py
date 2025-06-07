@@ -42,6 +42,15 @@ ES_URL = os.environ.get('ES_URL', 'localhost')
 ES_PORT = os.environ.get('ES_PORT', '9200')
 ES_SCHEMA = os.environ.get('ES_SCHEMA', 'http')
 
+
+REDIS_HOST=os.getenv('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+REDIS_DB = int(os.getenv('REDIS_DB', 0))
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD','')
+
+RATE_LIMIT_DURATION_SECONDS= os.getenv('RATE_LIMIT_DURATION_SECONDS', 14400)
+RATE_LIMIT_MAX_PROMPTS = int(os.getenv('RATE_LIMIT_MAX_PROMPTS', 100))
+
 INSTALLED_APPS = [
     'daphne',
     'django.contrib.admin',

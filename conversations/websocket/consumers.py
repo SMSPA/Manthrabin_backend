@@ -1,10 +1,13 @@
+import asyncio
 import json
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-import asyncio
+from redis.exceptions import WatchError
 
-from rag_utils.chat_util import simple_chat
+from manthrabin_backend import settings
+from manthrabin_backend.connections import  get_redis_client
+
 from rag_utils.conversation_name import chat_name
 from conversations.models import Conversation, Prompt
 from rag_utils.response_pipeline import stream
@@ -19,19 +22,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.model_name = ""
         self.user_interests = None
         self.first_time = False
+        self.user = None
+
+        self.redis_client = get_redis_client()
+        self.MAX_PROMPTS = settings.RATE_LIMIT_MAX_PROMPTS
+        self.DURATION = settings.RATE_LIMIT_DURATION_SECONDS
 
     async def connect(self):
-        user = self.scope.get('user', None)
+        self.user = self.scope.get('user', None)
 
-        if not user.is_authenticated:
+        if not self.user.is_authenticated:
             print("Oh No")
             await self.close(code=4001)
             return
 
         conversation_public_id = self.scope['url_route']['kwargs']['conversation_public_id']
-        self.conversation, self.model_name = await self.is_valid_conversation(user, conversation_public_id)
+        self.conversation, self.model_name = await self.is_valid_conversation(self.user, conversation_public_id)
         self.prompts = await self.conversation_prompts()
-        self.user_interests = await self.get_users_interests(user)
+        self.user_interests = await self.get_users_interests(self.user)
         if self.conversation is None:
             print("invalid conversation")
             await self.close(code=4003)
@@ -47,6 +55,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         print("received", text_data)
         if text_data:
+            if not await self.check_and_increment_rate_limit(self.user.PublicID):
+                await self.send("Your Usage Limitation has been reached")
+                return
+
             history = self.create_history(self.prompts[-10:])
             full_response_for_db = ""
             for response in stream(query=text_data, history=history, favorites=self.user_interests,
@@ -125,3 +137,36 @@ class ChatConsumer(AsyncWebsocketConsumer):
             ]
             history.extend(new_history)
         return history
+
+    async def check_and_increment_rate_limit(self, user_public_id):
+        if not self.redis_client:
+            print("Redis client not initialized. Rate limiting bypassed.")
+            return True
+
+        key = f"rate_limit:user:{ user_public_id}:prompts"
+
+        async with self.redis_client.pipeline() as pipe:
+            try:
+                await pipe.watch(key)
+                key_exists = await pipe.exists(key)
+                pipe.multi()
+
+                if not key_exists:
+                    pipe.set(key, 1)
+                    pipe.expire(key, self.DURATION)
+                else :
+                    pipe.incr(key)
+
+                current_count = await pipe.get(key).execute()
+
+                if current_count[0] > self.MAX_PROMPTS:
+                    return False
+                else:
+                    return True
+
+            except WatchError:
+                print(f"WATCH error for user {user_public_id}, retrying transaction...")
+                await asyncio.sleep(0.01)
+            except Exception as e:
+                print(f"An unexpected error occurred during rate limiting: {e}")
+                return False
