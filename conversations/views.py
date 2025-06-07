@@ -8,14 +8,17 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics, status, viewsets
-from haystack.query import SearchQuerySet
-from django.db.models import Q
+from django.db import models
+from django.core.exceptions import ValidationError
+from django_elasticsearch_dsl.search import Search
+from drf_spectacular.utils import extend_schema
 
 from manthrabin_backend import settings
 from .models import Conversation, Prompt, SharedConversation, LLMModel
-from .serializers import ConversationSerializer, PromptSerializer, LLMModelSerializer
+from .serializers import ConversationSearchSerializer, ConversationSerializer, PromptSearchSerializer, PromptSerializer, LLMModelSerializer
 from rest_framework.pagination import LimitOffsetPagination
 from rag_utils.chat_util import simple_chat
+from .documents import PromptDocument
 
 class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
@@ -149,68 +152,177 @@ class ShareConversationView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
-
-
-class ConversationSearchView(APIView):
+@extend_schema(operation_id="search_conversations")
+class ConversationSearchView(generics.ListAPIView):
+    """
+    GET /api/conversations/search/?q=...
+    returns list of { conversation_id, title, matching_prompts[...] }
+    """
     permission_classes = [IsAuthenticated]
+    serializer_class = ConversationSearchSerializer
 
-    def get(self, request, format=None):
-        query = request.GET.get('q', '')
+    def get_queryset(self):
+        q = self.request.GET.get('q', '').strip()
+        if not q:
+            raise ValidationError({"q": "Query parameter 'q' is required."})
 
-        if not query:
-            return Response({
-                "detail": "Query parameter 'q' is required."},
-                status=status.HTTP_400_BAD_REQUEST,
+        s = (
+            PromptDocument.search()
+            .query("multi_match", query=q, fields=["user_prompt", "response"])
+            .filter("term", user_id=self.request.user.id)
+            .source(["conversation_public_id"])
+        )
+        resp = s.execute()
+        conv_ids = {hit.conversation_public_id for hit in resp.hits}
+
+        qs = (
+            Conversation.objects.filter(public_id__in=conv_ids, user=self.request.user)
+            .prefetch_related("prompts")
+        )
+
+        results = []
+        for conv in qs:
+            matches = [
+                {
+                    "prompt_id": p.public_id,
+                    "user_prompt": p.user_prompt,
+                    "response":    p.response,
+                    "time":        p.time,
+                }
+                for p in conv.prompts.filter(
+                    models.Q(user_prompt__icontains=q) |
+                    models.Q(response__icontains=q)
                 )
-        search_results = SearchQuerySet().filter(content=query).filter(user_id=request.user.id)
-
-        conv_results = []
-        for result in search_results:
-            conv = result.object
-
-            matching_prompts = conv.prompts.filter(
-                Q(user_prompt__icontains=query) | Q(response__icontains=query)
-            )
-
-            conv_results.append({
-                "conversation_id": str(conv.public_id),
-                "title": conv.title,
-                "matching_prompts": [
-                    {
-                        "prompt_id": str(prompt.public_id),
-                        "user_prompt": prompt.user_prompt,
-                        "response": prompt.response,
-                        "time": prompt.time,
-                    } for prompt in matching_prompts
-                ]
+            ]
+            results.append({
+                "conversation_id": conv.public_id,
+                "title":           conv.title,
+                "matching_prompts": matches,
             })
+        return results
 
-        return Response(conv_results)
 
+@extend_schema(operation_id="search_prompts_in_conversation")
+class PromptsSearchView(generics.ListAPIView):
+    """
+    GET /api/conversations/{conversation_id}/prompts/search/?q=...
+    returns list of { prompt_id }
+    """
 
-class PromptsSearchView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = PromptSearchSerializer
 
-    def get(self, request, conversation_id, format=None):
-        try:
-            conversation = Conversation.objects.get(public_id=conversation_id, user=request.user)
-        except Conversation.DoesNotExist:
-            return Response({"error": "Conversation not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        query = request.GET.get('q')
-        if not query:
-            return Response({"error": "Please provide a 'q' query parameter."}, status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        conv = get_object_or_404(
+            Conversation,
+            public_id=self.kwargs["conversation_id"],
+            user=self.request.user
+        )
+        q = self.request.GET.get("q", "").strip()
+        if not q:
+            raise ValidationError({"q": "Please provide a 'q' query parameter."})
 
-        search_results = SearchQuerySet().filter(content=query).filter(conversation_public_id=str(conversation.public_id))
+        s = (
+            PromptDocument.search()
+            .query("multi_match", query=q, fields=["user_prompt", "response"])
+            .filter("term", conversation_public_id=str(conv.public_id))
+            .filter("term", user_id=self.request.user.id)
+        )
+        resp = s.execute()
+        return [{"prompt_id": hit.public_id} for hit in resp.hits]
 
-        prompts = []
-        for result in search_results:
-            prompt = result.object
-            prompts.append({
-                "prompt_id": str(prompt.public_id),
-            })
 
-        return Response(prompts)
+# class ConversationSearchView(generics.GenericAPIView):
+#     """
+#     Search across a user's conversations by matching prompts/responses in Elasticsearch,
+#     """
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = ConversationSearchSerializer
+
+#     def get(self, request, format=None):
+#         q = request.GET.get('q', "")
+#         if not q:
+#             return Response({"detail": "Query parameter 'q' is required."},
+#                             status=status.HTTP_400_BAD_REQUEST)
+
+#         s = PromptDocument.search().query(
+#             "multi_match",
+#             query=q,
+#             fields=["user_prompt", "response"]
+#         )
+#         s = s.filter("term", user_id=request.user.id)
+#         s = s.source(["conversation_public_id"])
+
+#         resp = s.execute()
+
+#         conv_ids = {hit.conversation_public_id for hit in resp.hits}
+
+#         conv_results = []
+
+#         conversations = Conversation.objects.filter(
+#             public_id__in=conv_ids,
+#             user=request.user
+#         ).prefetch_related("prompts")
+
+#         for conv in conversations:
+#             # find only the prompts in this conversation that match q
+#             matching_prompts = [
+#                 {
+#                     "prompt_id": str(p.public_id),
+#                     "user_prompt": p.user_prompt,
+#                     "response":    p.response,
+#                     "time":        p.time,
+#                 }
+#                 for p in conv.prompts.filter(
+#                     models.Q(user_prompt__icontains=q)
+#                     | models.Q(response__icontains=q)
+#                 )
+#             ]
+#             conv_results.append({
+#                 "conversation_id": str(conv.public_id),
+#                 "title":           conv.title,
+#                 "matching_prompts": matching_prompts,
+#             })
+#         serializer = self.get_serializer(conv_results, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# class PromptsSearchView(generics.GenericAPIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request, conversation_id, format=None):
+#         try:
+#             conversation = Conversation.objects.get(
+#                 public_id=conversation_id,
+#                 user=request.user
+#             )
+#         except Conversation.DoesNotExist:
+#             return Response({"error": "Conversation not found."},
+#                             status=status.HTTP_404_NOT_FOUND)
+
+#         q = request.GET.get("q", "")
+#         if not q:
+#             return Response({"error": "Please provide a 'q' query parameter."},
+#                             status=status.HTTP_400_BAD_REQUEST)
+
+#         s = PromptDocument.search().query(
+#             "multi_match",
+#             query=q,
+#             fields=["user_prompt", "response"]
+#         )
+#         s = s.filter("term", conversation_public_id=str(conversation.public_id))
+
+#         s = s.filter("term", user_id=request.user.id)
+
+#         resp = s.execute()
+
+#         prompts = [
+#             {"prompt_id": hit.public_id}
+#             for hit in resp.hits
+#         ]
+
+#         return Response(prompts)
 
 
 class LLMModelListView(generics.ListAPIView):
