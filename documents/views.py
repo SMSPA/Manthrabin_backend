@@ -7,7 +7,7 @@ import logging # TODO: improve usage of logging
 from .models import Document
 from .serializers import DocumentSerializer
 # TODO: add docker-compose then uncomment this line
-from .elastic import add_docs_pipeline, delete_docs_pipeline, es_client
+from rag_utils.elastic import add_docs_pipeline, delete_docs_pipeline, es_client
 
 
 class AdminOnlyPermission(permissions.BasePermission):
