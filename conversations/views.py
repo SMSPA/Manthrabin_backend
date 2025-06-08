@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_400_BAD_REQUEST
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics, status, viewsets
@@ -54,9 +55,9 @@ class PromptCreateView(generics.CreateAPIView):
 
         if conversation.user != self.request.user:
             raise PermissionDenied("invalid conversation.")
-            prompt = serializer.validated_data.get('user_prompt')
-            response = simple_chat(prompt, conversation.public_id)
-            serializer.save(conversation=conversation, response=response)
+        prompt = serializer.validated_data.get('user_prompt')
+        response = simple_chat(prompt, conversation.public_id)
+        serializer.save(conversation=conversation, response=response)
 
 class CreateConversationLinkView(APIView):
     permission_classes = [IsAuthenticated]
@@ -79,7 +80,10 @@ class CreateConversationLinkView(APIView):
         conversation_public_id = kwargs.get('conversation_id')
         conversation = get_object_or_404(Conversation, public_id=conversation_public_id)
         if conversation.user != self.request.user:
-            raise PermissionDenied("invalid conversation.")
+            return Response(
+                ({"error": "conversation not found"}),
+                status=404
+            )
         share_link =  self._create_or_update_shared_conversation( conversation)
         link=f"127.0.0.1:3000/share/{share_link.public_id}"
 
@@ -92,16 +96,17 @@ class CreateConversationLinkView(APIView):
                 fail_silently=False,
 
             )
-        except SMTPException as e:
+
+            return Response({
+                "message": f"Share link sent to {email}."
+            }, status=200)
+
+        except Exception as e:
+            print(f"SMTP error occurred: {e}")
             return Response(
                 {"error": "Failed to send email.", "details": str(e)},
                 status=502
             )
-
-        return Response({
-            "message": f"Share link sent to {email}."
-        }, status=200)
-
     def _create_or_update_shared_conversation(self, conversation):
         last_prompt = conversation.prompts.first()
         try:
@@ -155,7 +160,7 @@ class ShareConversationView(APIView):
 @extend_schema(operation_id="search_conversations")
 class ConversationSearchView(generics.ListAPIView):
     """
-    GET /api/conversations/search/?q=...
+    .
     returns list of { conversation_id, title, matching_prompts[...] }
     """
     permission_classes = [IsAuthenticated]
