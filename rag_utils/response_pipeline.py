@@ -28,8 +28,6 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from .web_search import  fetch_links_content
 
 
-# Step 1: Load environment variables (e.g., API keys, URLs)
-load_dotenv()
 
 
 # Step 2: Initialize text embedding model

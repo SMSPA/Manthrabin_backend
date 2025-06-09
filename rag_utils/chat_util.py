@@ -21,7 +21,6 @@ def simple_chat(
         sessionID: str,
         model: str = "google/gemini-2.0-flash-exp:free"
 ):
-    load_dotenv()
     llm = llm = ChatOpenAI(
         model="gpt-4o",
         temperature=0,

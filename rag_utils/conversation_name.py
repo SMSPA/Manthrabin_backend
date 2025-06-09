@@ -18,8 +18,6 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 
-# 1. Load environment variables from a .env file
-load_dotenv()
 
 # 2. Initialize the OpenAI chat model (GPT-4o-mini)
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0, max_tokens=50)
