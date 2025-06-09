@@ -1,4 +1,5 @@
 import uuid
+import logging
 from smtplib import SMTPException
 
 from django.core.mail import send_mail
@@ -19,6 +20,8 @@ from .serializers import ConversationSearchSerializer, ConversationSerializer, P
 from rest_framework.pagination import LimitOffsetPagination
 from rag_utils.chat_util import simple_chat
 from .documents import PromptDocument
+
+logger = logging.getLogger(__name__)
 
 class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
@@ -162,44 +165,53 @@ class ConversationSearchView(generics.ListAPIView):
     serializer_class = ConversationSearchSerializer
 
     def get_queryset(self):
-        q = self.request.GET.get('q', '').strip()
-        if not q:
-            raise ValidationError({"q": "Query parameter 'q' is required."})
+        try:
+            q = self.request.GET.get('q', '').strip()
+            if not q:
+                raise ValidationError({"q": "Query parameter 'q' is required."})
 
-        s = (
-            PromptDocument.search()
-            .query("multi_match", query=q, fields=["user_prompt", "response"])
-            .filter("term", user_id=self.request.user.id)
-            .source(["conversation_public_id"])
-        )
-        resp = s.execute()
-        conv_ids = {hit.conversation_public_id for hit in resp.hits}
+            s = (
+                PromptDocument.search()
+                .query("multi_match", query=q, fields=["user_prompt", "response"])
+                .filter("term", user_id=self.request.user.id)
+                .source(["conversation_public_id", "public_id", "user_prompt", "response", "time"])
+            )
+            response = s.execute()
+            
+            # Group results by conversation
+            conversation_data = {}
+            for hit in response.hits:
+                conv_id = hit.conversation_public_id
+                if conv_id not in conversation_data:
+                    conversation_data[conv_id] = {
+                        "matching_prompts": []
+                    }
+                conversation_data[conv_id]["matching_prompts"].append({
+                    "prompt_id": hit.public_id,
+                    "user_prompt": hit.user_prompt,
+                    "response": hit.response,
+                    "time": hit.time,
+                })
 
-        qs = (
-            Conversation.objects.filter(public_id__in=conv_ids, user=self.request.user)
-            .prefetch_related("prompts")
-        )
+            conversations = Conversation.objects.filter(
+                public_id__in=conversation_data.keys(),
+                user=self.request.user
+            )
 
-        results = []
-        for conv in qs:
-            matches = [
-                {
-                    "prompt_id": p.public_id,
-                    "user_prompt": p.user_prompt,
-                    "response":    p.response,
-                    "time":        p.time,
-                }
-                for p in conv.prompts.filter(
-                    models.Q(user_prompt__icontains=q) |
-                    models.Q(response__icontains=q)
-                )
-            ]
-            results.append({
-                "conversation_id": conv.public_id,
-                "title":           conv.title,
-                "matching_prompts": matches,
-            })
-        return results
+            # Combine results
+            results = []
+            for conv in conversations:
+                results.append({
+                    "conversation_id": conv.public_id,
+                    "title": conv.title,
+                    "matching_prompts": conversation_data[str(conv.public_id)]["matching_prompts"]
+                })
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Search failed: {str(e)}")
+            raise ValidationError({"error": "Search operation failed"})
 
 
 @extend_schema(operation_id="search_prompts_in_conversation")
@@ -214,24 +226,30 @@ class PromptsSearchView(generics.ListAPIView):
 
 
     def get_queryset(self):
-        conv = get_object_or_404(
-            Conversation,
-            public_id=self.kwargs["conversation_id"],
-            user=self.request.user
-        )
-        q = self.request.GET.get("q", "").strip()
-        if not q:
-            raise ValidationError({"q": "Please provide a 'q' query parameter."})
+        try:
+            conv = get_object_or_404(
+                Conversation,
+                public_id=self.kwargs["conversation_id"],
+                user=self.request.user
+            )
+            q = self.request.GET.get("q", "").strip()
+            if not q:
+                raise ValidationError({"q": "Please provide a 'q' query parameter."})
 
-        s = (
-            PromptDocument.search()
-            .query("multi_match", query=q, fields=["user_prompt", "response"])
-            .filter("term", conversation_public_id=str(conv.public_id))
-            .filter("term", user_id=self.request.user.id)
-        )
-        resp = s.execute()
-        return [{"prompt_id": hit.public_id} for hit in resp.hits]
-
+            s = (
+                PromptDocument.search()
+                .query("multi_match", query=q, fields=["user_prompt", "response"])
+                .filter("term", conversation_public_id=str(conv.public_id))
+                .filter("term", user_id=self.request.user.id)
+                .source(["public_id"])
+            )
+            response = s.execute()
+            if not response.hits:
+                return []
+            return [{"prompt_id": hit.public_id} for hit in response.hits]
+        except Exception as e:
+            logger.error(f"Search failed: {str(e)}")
+            raise ValidationError({"error": "Search operation failed"})
 
 # class ConversationSearchView(generics.GenericAPIView):
 #     """

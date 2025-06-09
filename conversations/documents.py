@@ -22,8 +22,8 @@ class ConversationDocument(Document):
     We index fields we want to query/filter on.
     """
     public_id = fields.KeywordField()
-    title     = fields.TextField()
-    user_id   = fields.IntegerField(attr="user_id")
+    title = fields.TextField()
+    user_id = fields.IntegerField()
 
     class Index:
         name = "conversations"
@@ -35,6 +35,9 @@ class ConversationDocument(Document):
         # only index active/published items (optional)
         return super().get_queryset().all()
 
+    def prepare_user_id(self, instance):
+        return instance.user.id
+
 
 @prompt_index.document
 class PromptDocument(Document):
@@ -42,12 +45,12 @@ class PromptDocument(Document):
     Elasticsearch “document” mapping for Prompt.
     We index both user_prompt and response, plus the parent conversation’s UUID & user_id.
     """
-    public_id            = fields.KeywordField()        
-    user_prompt          = fields.TextField()          
-    response             = fields.TextField()          
-    conversation_public_id = fields.KeywordField(attr="conversation.public_id")
-    user_id              = fields.IntegerField(attr="conversation.user_id")
-    time                 = fields.DateField()
+    public_id = fields.KeywordField()        
+    user_prompt = fields.TextField()          
+    response = fields.TextField()          
+    conversation_public_id = fields.KeywordField()
+    user_id = fields.IntegerField()
+    time = fields.DateField()
 
     class Index:
         name = "prompts"
@@ -57,3 +60,9 @@ class PromptDocument(Document):
 
     def get_queryset(self):
         return super().get_queryset().select_related("conversation")
+    
+    def prepare_conversation_public_id(self, instance):
+        return str(instance.conversation.public_id)
+
+    def prepare_user_id(self, instance):
+        return instance.conversation.user.id

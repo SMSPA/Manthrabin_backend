@@ -13,6 +13,11 @@ router = DefaultRouter()
 router.register(r'', ConversationViewSet, basename='conversation')
 
 urlpatterns = [
+    path(
+        'search/',
+        ConversationSearchView.as_view(),
+        name='conversation-search'
+    ),
     *router.urls,
     path('<uuid:conversation_id>/prompts/',
          PromptsListView.as_view(),
@@ -26,11 +31,6 @@ urlpatterns = [
 path('share/<uuid:share_id>/',
          ShareConversationView.as_view(),
          name = 'share-conversation'),
-    path(
-        'search/',
-        ConversationSearchView.as_view(),
-        name='conversation-search'
-    ),
     path(
         '<uuid:conversation_id>/search/', 
         PromptsSearchView.as_view(),

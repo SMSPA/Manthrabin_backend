@@ -43,17 +43,17 @@ class ConversationSerializer(serializers.ModelSerializer):
 
 
 class PromptMatchSerializer(serializers.Serializer):
-    prompt_id = serializers.UUIDField(format='hex', read_only=True)
+    prompt_id = serializers.UUIDField()
     user_prompt = serializers.CharField()
     response = serializers.CharField()
     time = serializers.DateTimeField()
 
 
 class ConversationSearchSerializer(serializers.Serializer):
-    conversation_id = serializers.UUIDField(format='hex', read_only=True)
+    conversation_id = serializers.UUIDField()
     title = serializers.CharField()
     matching_prompts = PromptMatchSerializer(many=True)
 
 
 class PromptSearchSerializer(serializers.Serializer):
-    prompt_id = serializers.UUIDField(format='hex', read_only=True)
+    prompt_id = serializers.UUIDField()
