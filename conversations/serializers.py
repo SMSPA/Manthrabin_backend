@@ -18,7 +18,7 @@ class PromptSerializer(serializers.ModelSerializer):
 class ConversationSerializer(serializers.ModelSerializer):
     model = serializers.UUIDField(write_only=True)
     model_info = serializers.SerializerMethodField()
-    title = serializers.CharField(required=False)
+    title = serializers.CharField(required=True)
 
     class Meta:
         model = Conversation
