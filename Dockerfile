@@ -3,6 +3,9 @@ LABEL maintainer="SMSPA Team <arshia2562@gmail.com>"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential curl libpq-dev \
+    python3-dev \
+    libmariadb-dev-compat \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \
     && apt-get clean \
     && useradd -m python
@@ -26,7 +29,7 @@ LABEL maintainer="SMSPA Team <arshia2562@gmail.com>"
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libcurl4-gnutls-dev librtmp-dev libpq-dev \
+    && apt-get install -y --no-install-recommends libmariadb-dev-compat libcurl4-gnutls-dev librtmp-dev libpq-dev \
     && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \
     && apt-get clean \
     && useradd --create-home --no-log-init python \
