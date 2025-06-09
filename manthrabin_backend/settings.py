@@ -23,20 +23,30 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 dotenv_path = str(BASE_DIR / ".env")
 
-if not os.path.isfile(dotenv_path):
-    raise FileNotFoundError(f"Required .env file not found at {dotenv_path}")
 
 load_dotenv(dotenv_path=BASE_DIR/".env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true","1")
+
+if not os.path.isfile(dotenv_path) and DEBUG:
+    raise FileNotFoundError(f"Required .env file not found at {dotenv_path}")
+
+
 if DEBUG:
     ALLOWED_HOSTS = ['*']
     SECRET_KEY = 'django-insecure-i)wkb3_rilc6e2q1fb@72o7%gt*q^wzo^jla!f8)k5r2li^*(t'
 else:
-    ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS').split(',')
-    SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+    try:
+        ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS').split(',')
+        CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS').split(',')
+    except AttributeError as e: # TODO: should be an 'if' where docker is building
+        ALLOWED_HOSTS = ['*'] #QUICK_FIX
+    SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', "dummyvalue")
+
+# USE_X_FORWARDED_HOST = True
+# SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 ES_URL = os.environ.get('ES_URL', 'localhost')
 ES_PORT = os.environ.get('ES_PORT', '9200')
@@ -212,16 +222,6 @@ STATIC_ROOT = BASE_DIR / 'static'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-HAYSTACK_CONNECTIONS = {
-    'default': {
-        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine',
-        # 'URL': 'http://127.0.0.1:9200',
-        # 'INDEX_NAME': 'Manthrabin',
-    },
-}
-
-HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
 
 STORAGES = {
     "default": {
