@@ -87,7 +87,7 @@ services:
     environment:
       - discovery.type=single-node
       - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=12345678
+      - ELASTICSEARCH_PASSWORD=eEV(m[19]fw*iX,t
       - xpack.security.enabled=false
       - xpack.security.enrollment.enabled=false
     ulimits:
